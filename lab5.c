@@ -11,6 +11,10 @@
 #define null NULL
 #endif
 
+#ifndef byte
+#define byte unsigned char
+#endif
+
 #define Lab5ErrorReadFile 1
 #define Lab5ErrorUnknownFormat 3
 #define Lab5ErrorWriteFile 70
@@ -25,8 +29,9 @@ int *ImgPassThreadsArgs;
 struct Img {
 	int Width;
 	int Heigth;
-	int **Src;
-	int **Dst;
+
+	byte **Src;
+	byte **Dst;
 };
 
 struct Img **ImgSlices;
@@ -67,9 +72,12 @@ int ImgWrite(const char *FileName, int ImgSliceCount)
 	for (i = 0; i < ImgSliceCount; i++) {
 		for (y = 0; y < ImgSlices[0]->Heigth; y++) {
 			for (x = 0; x < ImgSlices[0]->Width; x++) {
-				fprintf(File, "%d\n", ImgSlices[i]->Dst[y][x]);
-				fprintf(File, "%d\n", ImgSlices[i]->Dst[y][x]);
-				fprintf(File, "%d\n", ImgSlices[i]->Dst[y][x]);
+				fprintf(File, "%d\n", (int)ImgSlices[i]->
+					Dst[y][x]);
+				fprintf(File, "%d\n", (int)ImgSlices[i]->
+					Dst[y][x]);
+				fprintf(File, "%d\n", (int)ImgSlices[i]->
+					Dst[y][x]);
 			}
 			//printf("%d ", ImgSlices[i]->Src[y][x]);
 		}
@@ -121,12 +129,13 @@ int ImgRead(const char *FileName, int ImgSliceCount)
 		ImgSlices[i] = malloc(sizeof(struct Img));
 		ImgSlices[i]->Width = Width;
 		ImgSlices[i]->Heigth = ImgSliceHeigth;
-		ImgSlices[i]->Src = malloc(ImgSliceHeigth * sizeof(int *));
-		ImgSlices[i]->Dst = malloc(ImgSliceHeigth * sizeof(int *));
+		ImgSlices[i]->Src = malloc(ImgSliceHeigth * sizeof(byte *));
+		ImgSlices[i]->Dst = malloc(ImgSliceHeigth * sizeof(byte *));
 
 		for (y = o; y < (o + ImgSliceHeigth); y++) {
-			ImgSlices[i]->Src[y-o] = malloc(Width * sizeof(int));
-			ImgSlices[i]->Dst[y-o] = calloc(1, Width * sizeof(int));
+			ImgSlices[i]->Src[y-o] = malloc(Width * sizeof(byte));
+			ImgSlices[i]->Dst[y-o] =
+				calloc(1, Width * sizeof(byte));
 
 			for (x = 0; x < Width; x++) {
 				int Pix[3];

@@ -3,16 +3,24 @@
 #include <stdio.h>
 #include <string.h>
 #include <math.h>
+#include <pthread.h>
+#include <time.h>
+#include <signal.h>
 
 #ifndef null
 #define null NULL
 #endif
 
 #define Lab5ErrorReadFile 1
-#define Lab5ErrorWriteFile 70
 #define Lab5ErrorUnknownFormat 3
+#define Lab5ErrorWriteFile 70
 #define Lab5ErrorParsingFile 4
 #define Lab5ErrorUsage 23
+#define Lab5ErrorTiming 394
+#define Lab5ErrorThreading 45
+
+pthread_t *ImgPassThreads;
+int *ImgPassThreadsArgs;
 
 struct Img {
 	int Width;
@@ -141,10 +149,11 @@ int ImgRead(const char *FileName, int ImgSliceCount)
 	fclose(File);
 };
 
-void ImgPass(int ImgSliceIndex)
+void *ImgPass(void *Arg)
 {
 	int x;
 	int y;
+	int ImgSliceIndex = *((int *)Arg);
 
 	for (y = 1; y < ImgSlices[0]->Heigth-1; y++) {
 		for (x = 1; x < ImgSlices[0]->Width-1; x++) {
@@ -168,14 +177,17 @@ void ImgPass(int ImgSliceIndex)
 								   Gy*Gy);
 		}
 	}
+	pthread_exit(null);
 }
 
 int main(int argc, char *argv[])
 {
-	int i = 0;
+	int i;
 	int ImgSliceCount = 1;
 	char FileSrc[256] = {0};
 	char FileDst[256] = {0};
+	struct timespec ImgPassTimeStart, ImgPassTimeFinish;
+	double ImgPassTimeElapsed;
 
 	for (i = 0; i < argc; i++) {
 		if (!strcmp(argv[i], "-thd")) {
@@ -197,11 +209,47 @@ int main(int argc, char *argv[])
 		return Lab5ErrorUsage;
 	}
 
-	ImgRead(FileSrc, ImgSliceCount);
+	if (ImgRead(FileSrc, ImgSliceCount) == Lab5ErrorReadFile)
+		return Lab5ErrorReadFile;
 
-	for (i = 0; i < ImgSliceCount; i++) {
-		ImgPass(i);
+	ImgPassThreads = malloc(sizeof(pthread_t) * ImgSliceCount);
+	ImgPassThreadsArgs = malloc(sizeof(int) * ImgSliceCount);
+
+	if (clock_gettime(CLOCK_REALTIME, &ImgPassTimeStart)) {
+		printf("Error: Unable to measure time.\n");
+		return Lab5ErrorTiming;
 	}
 
+	for (i = 0; i < ImgSliceCount; i++) {
+		ImgPassThreadsArgs[i] = i;
+		if (pthread_create(&ImgPassThreads[i], null, ImgPass,
+			       (void *)&ImgPassThreadsArgs[i])) {
+			printf("Error: Unable to create Thread.\n");
+			return Lab5ErrorThreading;
+		}
+		//ImgPass(&i);
+	}
+
+	for (i = 0; i < ImgSliceCount; i++)
+		if (pthread_join(ImgPassThreads[i], null)) {
+			printf("Error: Unable to join Thread.\n");
+			return Lab5ErrorThreading;
+		}
+
+	if (clock_gettime(CLOCK_REALTIME, &ImgPassTimeFinish)) {
+		printf("Error: Unable to measure time.\n");
+		return Lab5ErrorTiming;
+	}
+
+	ImgPassTimeElapsed = ImgPassTimeFinish.tv_sec -
+			     ImgPassTimeStart.tv_sec;
+
+	ImgPassTimeElapsed += (ImgPassTimeFinish.tv_nsec -
+			       ImgPassTimeStart.tv_nsec) / 1000000000.0;
+
+	printf("Done within: %lfsec.\n", ImgPassTimeElapsed);
+
 	ImgWrite(FileDst, ImgSliceCount);
+
+	return 0;
 }

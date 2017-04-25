@@ -1,10 +1,10 @@
 default: ./lab5.c
-	gcc -o lab5.run ./lab5.c -lm
+	gcc -o lab5.run ./lab5.c -lm -lrt -lpthread
 
 test: ./lab5.c
 	reset
 	echo gcc:
-	gcc -o lab5.run ./lab5.c -lm -fsanitize=address
+	gcc -o lab5.run ./lab5.c -lm -lpthread -lrt -fsanitize=address
 	echo cppcheck:
 	cppcheck --enable=all --inconclusive --std=posix lab5.c
 	echo codepatch.pl:
